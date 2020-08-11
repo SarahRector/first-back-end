@@ -27,7 +27,9 @@ async function getLatLong(cityName) {
 }
 
 async function getWeather(lat, lon) {
-    const data = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?&=${lat}&=${lon}&key=${WEATHER_KEY}`);
+    const response = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?lat=${lat}&lon=${lon}&key=${WEATHER_KEY}`);
+    const data = response.body.data;
+    
     const forecastArray = data.map((weatherItem) => {
         return {
             forecast: weatherItem.weather.description,
