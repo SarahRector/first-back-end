@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { weatherData } = require('./data/weather.js');
 const port = process.env.PORT || 3000;
 const request = require('superagent');
 
@@ -11,7 +10,8 @@ app.use(cors());
 
 const {
     GEOCODE_API_KEY,
-    MOVIE_KEY
+    MOVIE_KEY,
+    WEATHER_KEY
 } = process.env;
 
 async function getLatLong(cityName) {
@@ -26,15 +26,15 @@ async function getLatLong(cityName) {
     };
 }
 
-function getWeather(lat, lon) {
-    const data = weatherData.data;
+async function getWeather(lat, lon) {
+    const data = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?&=${lat}&=${lon}&key=${WEATHER_KEY}`);
     const forecastArray = data.map((weatherItem) => {
         return {
             forecast: weatherItem.weather.description,
             time: new Date(weatherItem.ts * 1000),
         };
     });
-return forecastArray;
+    return forecastArray;
 }
 
 app.get('/location', async(req, res) => {
@@ -48,42 +48,42 @@ app.get('/location', async(req, res) => {
     }
 });
 
-app.get('/weather', (req, res) => {
+app.get('/weather', async(req, res) => {
     try {
         const userLat = req.query.latitude;
         const userLong = req.query.longitude;
     
-        const mungedData = getWeather(userLat, userLong);
+        const mungedData = await getWeather(userLat, userLong);
         res.json(mungedData);
     } catch (e) {
-        res.json(e.message);
+        res.status(500).json({ error: e.message });
     }
 });
 
-/* async function mungeMovies(cityName) {
-    const data = await request.get(api url with query....add api key and city name template literals);
+async function mungeMovies(cityName) {
+    const data = await request.get(`http://api.themoviedb.org/3/search/movie?api_key=${MOVIE_KEY}&query=${cityName}`);
     const movies = data.body.results;
 
-    const mungeMovies = movies.map(movie) => {
-        return{
-            title: movie.origional_title,
+    const mungedMovies = movies.map((movie) => {
+        return {
+            title: movie.original_title,
             release: movie.release_date
-        }
-    }
-    return mungeMovies;
+        };
+    });
+    return mungedMovies;
 }
 
 app.get('/movies', async(req, res) => {
     try {
         const userInput = req.query.search;
 
-        const movies = mungeMovies(city)
+        const movies = await mungeMovies(userInput);
 
-        res.json(mungeMovies);
+        res.json(movies);
     } catch (e) {
-        res.json(e.message);
+        res.status(500).json({ error: e.message });
     }
-});*/
+});
 
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`);
