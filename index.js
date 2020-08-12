@@ -11,7 +11,8 @@ app.use(cors());
 const {
     GEOCODE_API_KEY,
     MOVIE_KEY,
-    WEATHER_KEY
+    WEATHER_KEY,
+    TRAILS_KEY
 } = process.env;
 
 async function getLatLong(cityName) {
@@ -29,7 +30,6 @@ async function getLatLong(cityName) {
 async function getWeather(lat, lon) {
     const response = await request.get(`https://api.weatherbit.io/v2.0/forecast/daily?lat=${lat}&lon=${lon}&key=${WEATHER_KEY}`);
     const data = response.body.data;
-    
     const forecastArray = data.map((weatherItem) => {
         return {
             forecast: weatherItem.weather.description,
@@ -38,6 +38,42 @@ async function getWeather(lat, lon) {
     });
     return forecastArray;
 }
+
+async function getTrails(lat, lon) {
+    const response = await request.get(`https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${TRAILS_KEY}`);
+
+    const hikes = response.body.trails;
+
+    const allHikes = hikes.map(hike => {
+
+        return {
+            trail_url: hike.url,
+            name: hike.name,
+            location: hike.location,
+            length: hike.length,
+            condition_date: new Date(hike.conditionDate).toDateString(),
+            condition_time: new Date(hike.conditionDate).toTimeString(),
+            conditions: hike.conditionStatus,
+            stars: hike.stars,
+            star_votes: hike.starVotes,
+            summary: hike.summary
+
+        };
+    });
+    return allHikes;
+}
+
+app.get('/trails', async(req, res) => {
+    try {
+        const userLat = req.query.latitude;
+        const userLong = req.query.longitude;
+    
+        const mungedData = await getTrails(userLat, userLong);
+        res.json(mungedData);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.get('/location', async(req, res) => {
     try {
